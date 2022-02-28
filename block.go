@@ -19,7 +19,7 @@ func (b *Block) SetHash() {
 	b.Hash = sha512.Sum512(headers)
 }
 
-func NewBlock(data string, prevBlockHash [sha512.Size]byte, prevBlock Block) *Block {
+func NewBlock(data string, prevBlock *Block) *Block {
 	newBlock := &Block{blockHeight: prevBlock.blockHeight + 1, Data: []byte(data), prevBlockHash: prevBlock.Hash}
 	newBlock.SetHash()
 	return newBlock
