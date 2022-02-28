@@ -7,20 +7,20 @@ import (
 )
 
 type Block struct {
-	timestamp     uint64
+	blockHeight   uint64
 	Data          []byte
 	prevBlockHash [sha512.Size]byte
 	Hash          [sha512.Size]byte
 }
 
 func (b *Block) SetHash() {
-	timestampBytes := []byte(strconv.FormatUint(b.timestamp, 10))
-	headers := bytes.Join([][]byte{b.prevBlockHash[:], b.Data, timestampBytes}, []byte{})
+	blockHeightBytes := []byte(strconv.FormatUint(b.blockHeight, 10))
+	headers := bytes.Join([][]byte{b.prevBlockHash[:], b.Data, blockHeightBytes}, []byte{})
 	b.Hash = sha512.Sum512(headers)
 }
 
 func NewBlock(data string, prevBlockHash [sha512.Size]byte, prevBlock Block) *Block {
-	newBlock := &Block{timestamp: prevBlock.timestamp + 1, Data: []byte(data), prevBlockHash: prevBlock.Hash}
+	newBlock := &Block{blockHeight: prevBlock.blockHeight + 1, Data: []byte(data), prevBlockHash: prevBlock.Hash}
 	newBlock.SetHash()
 	return newBlock
 }
