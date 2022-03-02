@@ -21,7 +21,7 @@ func (bc *Blockchain) AddBlock(data string) {
 
 func NewBlockchain() *Blockchain {
 	bc := &Blockchain{}
-	genesisBlock := &Block{blockHeight: 0, Data: []byte("Genesis Block"), prevBlockHash: [sha512.Size]byte{}}
+	genesisBlock := &Block{blockHeight: 0, Data: []byte("Genesis Block"), prevBlockHash: [sha512.Size]byte{}, nonce: 0}
 	genesisBlock.Hash = sha512.Sum512(bytes.Join([][]byte{genesisBlock.prevBlockHash[:], genesisBlock.Data, []byte(strconv.FormatUint(genesisBlock.blockHeight, 10))}, []byte{}))
 	bc.blocks = append(bc.blocks, genesisBlock)
 	return bc
