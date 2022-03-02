@@ -15,6 +15,7 @@ type POW struct {
 	target *big.Int
 }
 
+// It is better to make this a method as well for consistency
 func NewProofOfWork(b *Block) *POW {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(512-targetBits))
@@ -48,4 +49,11 @@ func (pow *POW) Run() (uint64, [sha512.Size]byte) {
 	fmt.Printf("Nonce is: %d, Hash is : %x\n", nonce, hash)
 	fmt.Print("\n\n")
 	return nonce, hash
+}
+
+func (pow *POW) validate() bool {
+	var intHash big.Int
+	newHash := sha512.Sum512(pow.PrepareData(pow.block.nonce))
+	intHash.SetBytes(pow.block.Hash[:])
+	return newHash == pow.block.Hash && intHash.Cmp(pow.target) == -1
 }
