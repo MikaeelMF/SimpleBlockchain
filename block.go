@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha512"
+	"encoding/gob"
 )
 
 type Block struct {
@@ -19,4 +21,18 @@ func NewBlock(data string, prevBlock *Block) *Block {
 	newBlock.nonce = nonce
 	newBlock.Hash = hash
 	return newBlock
+}
+
+func (b *Block) Serialize() []byte {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+	_ = encoder.Encode(b)
+	return result.Bytes()
+}
+
+func Deserialize(b []byte) *Block {
+	var block Block
+	decoder := gob.NewDecoder(bytes.NewReader(b))
+	_ = decoder.Decode(&block)
+	return &block
 }
