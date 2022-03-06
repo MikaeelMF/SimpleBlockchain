@@ -1,5 +1,7 @@
 package main
 
+// Warning! Tail might cuase issues that needs to be fixed! It is replaced by tip in the main source code
+
 import (
 	"bytes"
 	"crypto/sha512"
@@ -15,8 +17,35 @@ const databaseAddress = "./dbfile"
 const blocksBucket = "blocksBucket"
 
 type Blockchain struct {
-	head []byte
+	tail []byte
 	db   *bolt.DB
+}
+
+type BlockchainIterator struct {
+	currentBlockHash []byte
+	db               *bolt.DB
+}
+
+func NewBlockchain() *Blockchain {
+	var tail []byte
+	db, _ := bolt.Open(databaseAddress, 0600, nil)
+	_ = db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		if b == nil {
+			genesisBlock := &Block{blockHeight: 0, Data: []byte("Genesis Block"), prevBlockHash: [sha512.Size]byte{}, nonce: 0}
+			genesisBlock.Hash = sha512.Sum512(bytes.Join([][]byte{genesisBlock.prevBlockHash[:], genesisBlock.Data, []byte(strconv.FormatUint(genesisBlock.blockHeight, 10))}, []byte{}))
+
+			b, _ := tx.CreateBucket([]byte(blocksBucket))
+			_ = b.Put(genesisBlock.Hash[:], Serialize(genesisBlock))
+			_ = b.Put([]byte("t"), genesisBlock.Hash[:])
+			tail = genesisBlock.Hash[:]
+		} else {
+			tail = b.Get([]byte("t"))
+		}
+		return nil
+	})
+	bc := &Blockchain{tail, db}
+	return bc
 }
 
 func (bc *Blockchain) AddBlock(data string) {
@@ -43,24 +72,18 @@ func (bc *Blockchain) AddBlock(data string) {
 	})
 }
 
-func NewBlockchain() *Blockchain {
-	var head []byte
-	db, _ := bolt.Open(databaseAddress, 0600, nil)
-	_ = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		if b == nil {
-			genesisBlock := &Block{blockHeight: 0, Data: []byte("Genesis Block"), prevBlockHash: [sha512.Size]byte{}, nonce: 0}
-			genesisBlock.Hash = sha512.Sum512(bytes.Join([][]byte{genesisBlock.prevBlockHash[:], genesisBlock.Data, []byte(strconv.FormatUint(genesisBlock.blockHeight, 10))}, []byte{}))
+// Iterator returnes an object that you can use to get blocks one after another
+func (bc *Blockchain) Iterator() *BlockchainIterator {
+	return &BlockchainIterator{bc.tail, bc.db}
+}
 
-			b, _ := tx.CreateBucket([]byte(blocksBucket))
-			_ = b.Put(genesisBlock.Hash[:], Serialize(genesisBlock))
-			_ = b.Put([]byte("t"), genesisBlock.Hash[:])
-			head = genesisBlock.Hash[:]
-		} else {
-			head = b.Get([]byte("t"))
-		}
+func (bci *BlockchainIterator) Next() *Block {
+	var block *Block
+	_ = bci.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		block = Deserialize(b.Get(bci.currentBlockHash))
 		return nil
 	})
-	bc := &Blockchain{head, db}
-	return bc
+	bci.currentBlockHash = block.prevBlockHash[:]
+	return block
 }
