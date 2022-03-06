@@ -23,7 +23,7 @@ func NewBlock(data string, prevBlock *Block) *Block {
 	return newBlock
 }
 
-func (b *Block) Serialize() []byte {
+func Serialize(b *Block) []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
 	_ = encoder.Encode(b)
