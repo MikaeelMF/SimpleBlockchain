@@ -36,7 +36,6 @@ func (pow *POW) Run() (uint64, [sha512.Size]byte) {
 	var intHash big.Int
 	var hash [sha512.Size]byte
 	var nonce uint64 = 1
-	// nonce = 1
 
 	for nonce != 0 {
 		hash = sha512.Sum512(pow.PrepareData(nonce))
