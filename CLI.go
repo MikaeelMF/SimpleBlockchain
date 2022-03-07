@@ -58,7 +58,7 @@ func (cli *CLI) printChain() {
 		fmt.Printf("Proof of work is : %t\n", pow.validate())
 		fmt.Println()
 
-		if len(block.prevBlockHash) == 0 {
+		if string(block.Data) == "Genesis Block" {
 			break
 		}
 	}
