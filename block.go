@@ -79,10 +79,8 @@ findNonce:
 // Returnes true if a block is hashed according to protocols
 func (b *Block) ValidateNonce() bool {
 
-	// setting the target
-	targetbits := GetTargetBits()
-	target := big.NewInt(1)
-	target.Lsh(target, uint(sha512.Size-targetbits))
+	// Get the target
+	target := GetTarget()
 
 	// convert current block hash into big Int to compare
 	var currentBlockHash big.Int
@@ -128,10 +126,8 @@ func (b *Block) findNonce(replace string) (bool, error) {
 		return false, errors.New("Already contains a nonce")
 	}
 
-	// setting the target
-	targetbits := GetTargetBits()
-	target := big.NewInt(1)
-	target.Lsh(target, uint(sha512.Size-targetbits))
+	// Get the target
+	target := GetTarget()
 
 	// initialize temporary nonce
 	var tempNonce uint64 = 1
