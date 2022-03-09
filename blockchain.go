@@ -1,89 +1,96 @@
 package main
 
-// Warning! Tail might cuase issues that needs to be fixed! It is replaced by tip in the main source code
-
 import (
-	"bytes"
-	"crypto/sha512"
-	"strconv"
-
 	bolt "go.etcd.io/bbolt"
 )
-
-// Genesis Block Hash: c4b64ddbaff431c9bf1e5b35752d8960507336098a2c612fd1374dda944e9e8b04fbefda96a7153ff82ab8b350ebfa9c66696c3a47196fbdc44ed1ce13b89f2f
-// Genesis Block Hash in Bytes: [196 182 77 219 175 244 49 201 191 30 91 53 117 45 137 96 80 115 54 9 138 44 97 47 209 55 77 218 148 78 158 139 4 251 239 218 150 167 21 63 248 42 184 179 80 235 250 156 102 105 108 58 71 25 111 189 196 78 209 206 19 184 159 47]
 
 const databaseAddress = "./dbfile"
 const blocksBucket = "blocksBucket"
 
 type Blockchain struct {
-	tail []byte
-	db   *bolt.DB
+	db       *bolt.DB
+	iterator *blockchainIterator
 }
 
-type BlockchainIterator struct {
-	currentBlockHash []byte
-	db               *bolt.DB
+type blockchainIterator struct {
+	visited *Block
 }
 
+// Generates a new blockchain with a genesis block and returns the result
 func NewBlockchain() *Blockchain {
-	var tail []byte
 	db, _ := bolt.Open(databaseAddress, 0600, nil)
 	_ = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		if b == nil {
-			genesisBlock := &Block{blockHeight: 0, Data: []byte("Genesis Block"), prevBlockHash: [sha512.Size]byte{}, nonce: 0}
-			genesisBlock.Hash = sha512.Sum512(bytes.Join([][]byte{genesisBlock.prevBlockHash[:], genesisBlock.Data, []byte(strconv.FormatUint(genesisBlock.blockHeight, 10))}, []byte{}))
-
 			b, _ := tx.CreateBucket([]byte(blocksBucket))
-			_ = b.Put(genesisBlock.Hash[:], Serialize(genesisBlock))
-			_ = b.Put([]byte("t"), genesisBlock.Hash[:])
-			tail = genesisBlock.Hash[:]
-		} else {
-			tail = b.Get([]byte("t"))
+			genesisBlock := generateGenesisBlock()
+			genesisBlockHash := genesisBlock.GetBlockHash()
+			b.Put(genesisBlockHash[:], genesisBlock.BlockEncoder())
+			b.Put([]byte("t"), genesisBlockHash[:])
 		}
 		return nil
 	})
-	bc := &Blockchain{tail, db}
-	return bc
+	return &Blockchain{db: db, iterator: &blockchainIterator{visited: nil}}
 }
 
+// AddBlock function appends a new block to current blockchain with given data
 func (bc *Blockchain) AddBlock(data string) {
-	var tail []byte
-	var tailBlock *Block
 
-	// Get the last block
-	_ = bc.db.View(func(tx *bolt.Tx) error {
+	// This function consists of three parts:
+	// 1. Prepare by getting the last mined block in blockchain
+	// 2. Generate a new block using block.go
+	// 3. Append the new block
+
+	//1. Preparation:
+	var hashLastBlock []byte // hash of the last block in blockchain retrived from database using "t" key in []byte format
+	var lastBlock *Block     // last block retrived from the database using its hash as a key
+
+	bc.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
-		tail = b.Get([]byte("t"))
-		tailBlock = Deserialize(b.Get(tail))
+		hashLastBlock = b.Get([]byte("t"))
+		lastBlock = BlockDecoder(b.Get(hashLastBlock))
 		return nil
 	})
 
-	// Generate the new block
-	newBlock := NewBlock(data, tailBlock)
+	// 2. Generation of New Block
+	newBlock := NewBlock(data, lastBlock)
 
-	// Add the new block to database and make the tail point to the last block
-	_ = bc.db.Update(func(tx *bolt.Tx) error {
+	// 3. Append the new block to the blockchain
+	bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
-		b.Put(newBlock.Hash[:], Serialize(newBlock))
-		b.Put([]byte("t"), newBlock.Hash[:])
+		newBlockHash := newBlock.GetBlockHash()
+		b.Put(newBlockHash[:], newBlock.BlockEncoder()) // Append the new block to database
+		b.Put([]byte("t"), newBlockHash[:])             // Update the tail for database
 		return nil
 	})
 }
 
-// Iterator returnes an object that you can use to get blocks one after another
-func (bc *Blockchain) Iterator() *BlockchainIterator {
-	return &BlockchainIterator{bc.tail, bc.db}
+// Generates the genesis Block and returnes the result
+func generateGenesisBlock() *Block {
+	genesisBlock := NewBlock("Genesis Block", nil)
+	return genesisBlock
 }
 
-func (bci *BlockchainIterator) Next() *Block {
-	var block *Block
-	_ = bci.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		block = Deserialize(b.Get(bci.currentBlockHash))
-		return nil
-	})
-	bci.currentBlockHash = block.prevBlockHash[:]
-	return block
+// Returns the previous block of the last visited block
+// If no block has been visited yet, it will start from the latest mined block
+func (bc *Blockchain) GetPreviousBlock() *Block {
+	var prevBlock *Block
+	iter := bc.iterator
+	if iter.visited == nil {
+		bc.db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(blocksBucket))
+			prevBlock = BlockDecoder(b.Get([]byte("t")))
+			bc.iterator.visited = prevBlock
+			return nil
+		})
+	} else {
+		bc.db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(blocksBucket))
+			prevBlockHash := iter.visited.GetPreviousBlockHash()
+			prevBlock = BlockDecoder(b.Get(prevBlockHash[:]))
+			bc.iterator.visited = prevBlock
+			return nil
+		})
+	}
+	return prevBlock
 }
