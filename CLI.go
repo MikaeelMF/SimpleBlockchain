@@ -6,13 +6,8 @@ import (
 	"os"
 )
 
-type CLI struct {
-	bc *Blockchain
-}
-
-func (cli *CLI) Run() {
-	// cli.validateArgs() WHAT IS THIS???
-
+// Run Cli to execute user commands
+func Run(bc *Blockchain) {
 	addBlockCmd := flag.NewFlagSet("addBlock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
 
@@ -23,7 +18,6 @@ func (cli *CLI) Run() {
 	case "printChain":
 		_ = printChainCmd.Parse(os.Args[2:])
 	default:
-		// cli.printUsage() WHAT IS THIS???
 		os.Exit(1)
 	}
 
@@ -32,33 +26,28 @@ func (cli *CLI) Run() {
 			addBlockCmd.Usage()
 			os.Exit(1)
 		}
-		cli.addBlock(*addBlockData)
+		addBlock(*addBlockData, bc)
 	}
 
 	if printChainCmd.Parsed() {
-		cli.printChain()
+		printChain(bc)
 	}
 }
 
-func (cli *CLI) addBlock(data string) {
-	cli.bc.AddBlock(data)
+func addBlock(data string, bc *Blockchain) {
+	bc.AddBlock(data)
 	fmt.Println("Success")
 }
 
-func (cli *CLI) printChain() {
-	bci := cli.bc.Iterator()
-
+func printChain(bc *Blockchain) {
 	for {
-		block := bci.Next()
-
-		fmt.Printf("Previous Block Hash is : %x\n", block.prevBlockHash)
-		fmt.Printf("Current Block Hash is : %x\n", block.Hash)
-		fmt.Printf("Block Data is : %s\n", block.Data)
-		pow := NewProofOfWork(block)
-		fmt.Printf("Proof of work is : %t\n", pow.validate())
+		block := bc.GetPreviousBlock()
+		fmt.Printf("Previous Block Hash is : %x\n", block.GetPreviousBlockHash())
+		fmt.Printf("Current Block Hash is : %x\n", block.GetBlockHash())
+		fmt.Printf("Block Data is : %s\n", block.GetData())
 		fmt.Println()
 
-		if string(block.Data) == "Genesis Block" {
+		if block.GetBlockHeight() == 0 {
 			break
 		}
 	}
