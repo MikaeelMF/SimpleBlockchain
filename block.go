@@ -139,6 +139,7 @@ func (b *Block) findNonce(replace string) (bool, error) {
 		intHash.SetBytes(tempHash[:])
 		if intHash.Cmp(target) == -1 {
 			b.nonce = tempNonce
+			b.hash = tempHash
 			break
 		}
 		tempNonce++
