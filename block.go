@@ -68,11 +68,10 @@ func NewBlock(data string, prevBlock *Block) *Block {
 
 findNonce:
 	res, err := newBlock.findNonce(replaceNonce)
+	if !res {
+		if err.Error() == "already contains a nonce" {
 
-	if res != true {
-		if err.Error() == "Already contains a nonce" {
-
-		} else if err.Error() == "Could not find a nonce" {
+		} else if err.Error() == "could not find a nonce" {
 			newBlock.timeStamp = time.Now()
 			replaceNonce = "true"
 			goto findNonce
@@ -92,17 +91,14 @@ func (b *Block) ValidateNonce() bool {
 	var currentBlockHash big.Int
 	currentBlockHash.SetBytes(b.hash[:])
 
-	if currentBlockHash.Cmp(target) == -1 {
-		return true
-	}
-	return false
+	return currentBlockHash.Cmp(target) == -1
 }
 
 // Encodes a block into a slice of bytes using gob.NewEncoder
 func (b *Block) BlockEncoder() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
-	_ = encoder.Encode(b)
+	encoder.Encode(b)
 	return result.Bytes()
 }
 
@@ -110,7 +106,7 @@ func (b *Block) BlockEncoder() []byte {
 func BlockDecoder(b []byte) *Block {
 	var block Block
 	decoder := gob.NewDecoder(bytes.NewReader(b))
-	_ = decoder.Decode(&block)
+	decoder.Decode(&block)
 	return &block
 }
 
@@ -119,6 +115,7 @@ func prepareBlockForPOW(b *Block, nonce uint64) []byte {
 	return bytes.Join([][]byte{
 		b.prevBlockHash[:],
 		b.data,
+		[]byte(strconv.FormatInt(b.timeStamp.Unix(), 10)),
 		[]byte(strconv.FormatUint(b.blockHeight, 10)),
 		[]byte(strconv.Itoa(int(nonce))),
 	}, []byte{})
@@ -126,15 +123,13 @@ func prepareBlockForPOW(b *Block, nonce uint64) []byte {
 
 // This function tries to find a valid nonce and returns true, nil if it does so
 func (b *Block) findNonce(replace string) (bool, error) {
-
 	// in case the work has been done before and it is not requested to redo it return
 	if replace != "true" && b.GetNonce() != 0 {
-		return false, errors.New("Already contains a nonce")
+		return false, errors.New("already contains a nonce")
 	}
 
 	// Get the target
 	target := GetTarget()
-
 	// initialize temporary nonce
 	var tempNonce uint64 = 1
 
@@ -147,14 +142,14 @@ func (b *Block) findNonce(replace string) (bool, error) {
 			b.nonce = tempNonce
 			b.hash = tempHash
 			break
+		} else {
+			tempNonce++
 		}
-		tempNonce++
 	}
 
 	// if no nonce could be found it will return flase and error
 	if tempNonce == 0 {
-		return false, errors.New("Could not find a nonce")
+		return false, errors.New("could not find a nonce")
 	}
-
 	return true, nil
 }
