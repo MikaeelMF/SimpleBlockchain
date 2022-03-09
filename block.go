@@ -58,7 +58,13 @@ func (b *Block) GetBlockInfo() (uint64, time.Time, string, [sha512.Size]byte, [s
 
 func NewBlock(data string, prevBlock *Block) *Block {
 	replaceNonce := "false"
-	newBlock := &Block{blockHeight: prevBlock.GetBlockHeight() + 1, timeStamp: time.Now(), data: []byte(data), prevBlockHash: prevBlock.GetBlockHash()}
+
+	var newBlock *Block
+	if prevBlock == nil {
+		newBlock = &Block{blockHeight: 0, timeStamp: time.Now(), data: []byte(data), prevBlockHash: sha512.Sum512([]byte("nil"))}
+	} else {
+		newBlock = &Block{blockHeight: prevBlock.GetBlockHeight() + 1, timeStamp: time.Now(), data: []byte(data), prevBlockHash: prevBlock.GetBlockHash()}
+	}
 
 findNonce:
 	res, err := newBlock.findNonce(replaceNonce)
