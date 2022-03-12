@@ -20,6 +20,15 @@ type Block struct {
 	nonce         uint64            // a nonce that lets the hash be less that target
 }
 
+type PublicBlock struct {
+	BlockHeight   uint64            // blockHeight is the distance of current block from the genesis block
+	TimeStamp     time.Time         // current time that the block is mined
+	Data          []byte            // data is the messages that we want to save in a block
+	PrevBlockHash [sha512.Size]byte // prevBlockHash referes to the previous block that current block is mined on top of
+	Hash          [sha512.Size]byte // hash is the sha_512 of nonce + blockHeight + data + prevBlockHash such that hash < target
+	Nonce         uint64            // a nonce that lets the hash be less that target
+}
+
 // A getter method for current block height @returns uint64
 func (b *Block) GetBlockHeight() uint64 {
 	return b.blockHeight
@@ -98,16 +107,22 @@ func (b *Block) ValidateNonce() bool {
 func (b *Block) BlockEncoder() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
-	encoder.Encode(b)
+	err := encoder.Encode(encoderHelper(b))
+	if err != nil {
+		panic(err)
+	}
 	return result.Bytes()
 }
 
 // Decodes an encoded block using gob.NewDecoder
-func BlockDecoder(b []byte) *Block {
-	var block Block
-	decoder := gob.NewDecoder(bytes.NewReader(b))
-	decoder.Decode(&block)
-	return &block
+func BlockDecoder(d []byte) *Block {
+	var pb *PublicBlock
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	err := decoder.Decode(&pb)
+	if err != nil {
+		panic(err)
+	}
+	return decoderHelper(pb)
 }
 
 // Prepares Block for hashing
@@ -152,4 +167,26 @@ func (b *Block) findNonce(replace string) (bool, error) {
 		return false, errors.New("could not find a nonce")
 	}
 	return true, nil
+}
+
+func encoderHelper(b *Block) *PublicBlock {
+	pb := &PublicBlock{}
+	pb.BlockHeight = b.GetBlockHeight()
+	pb.TimeStamp = b.GetTimeStamp()
+	pb.Data = []byte(b.GetData())
+	pb.PrevBlockHash = b.GetPreviousBlockHash()
+	pb.Hash = b.GetBlockHash()
+	pb.Nonce = b.GetNonce()
+	return pb
+}
+
+func decoderHelper(pb *PublicBlock) *Block {
+	b := &Block{}
+	b.blockHeight = pb.BlockHeight
+	b.timeStamp = pb.TimeStamp
+	b.data = pb.Data
+	b.prevBlockHash = pb.PrevBlockHash
+	b.hash = pb.Hash
+	b.nonce = pb.Nonce
+	return b
 }
