@@ -1,7 +1,8 @@
 package main
 
 func main() {
-	bc := NewBlockchain()
+	bc := InitBlockchain()
+
 	defer bc.db.Close()
 	Run(bc)
 }
