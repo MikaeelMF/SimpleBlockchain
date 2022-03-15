@@ -1,4 +1,4 @@
-package main
+package proofofwork
 
 import (
 	"math/big"

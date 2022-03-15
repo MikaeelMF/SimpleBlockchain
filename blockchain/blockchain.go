@@ -1,6 +1,7 @@
-package main
+package blockchain
 
 import (
+	"../block"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -12,7 +13,7 @@ type Blockchain struct {
 }
 
 type blockchainIterator struct {
-	visited *Block
+	visited *block.Block
 }
 
 // Generates a new blockchain with a genesis block and returns the result
@@ -29,8 +30,8 @@ func InitBlockchain() *Blockchain {
 }
 
 // Generates the genesis Block and returnes the result
-func genesisBlockGenerator() *Block {
-	return NewBlock("Genesis Block", nil)
+func genesisBlockGenerator() *block.Block {
+	return block.NewBlock("Genesis Block", nil)
 }
 
 func (bc *Blockchain) AddBlock(data string) {
@@ -42,14 +43,14 @@ func (bc *Blockchain) AddBlock(data string) {
 	//1. Preparation:
 	var hashLastBlock []byte    // hash of the last block in blockchain retrived from database using "t" key in []byte format
 	var lastBlockEncoded []byte // last block in encoded format retrived from the database using its hash as a key
-	var lastBlock *Block        // last block decoded
+	var lastBlock *block.Block  // last block decoded
 
 	hashLastBlock, _ = bc.db.Get([]byte("t"), nil)
 	lastBlockEncoded, _ = bc.db.Get(hashLastBlock, nil)
-	lastBlock = BlockDecoder(lastBlockEncoded)
+	lastBlock = block.BlockDecoder(lastBlockEncoded)
 
 	// 2. Generation of New Block
-	newBlock := NewBlock(data, lastBlock)
+	newBlock := block.NewBlock(data, lastBlock)
 
 	// 3. Append the new block to the blockchain
 	newBlockHash := newBlock.GetBlockHash()
@@ -60,9 +61,9 @@ func (bc *Blockchain) AddBlock(data string) {
 // Returns the previous block of the last visited block
 // If no block has been visited yet, it will start from the latest mined block
 
-func (bc *Blockchain) GetPreviousBlock() *Block {
+func (bc *Blockchain) GetPreviousBlock() *block.Block {
 	var prevBlockHash []byte
-	var prevBlock *Block
+	var prevBlock *block.Block
 	iter := bc.iterator
 
 	if iter.visited == nil {
@@ -75,7 +76,7 @@ func (bc *Blockchain) GetPreviousBlock() *Block {
 		prevBlockHash = prevBlockHashTemp[:]
 	}
 	prevBlockEncoded, _ := bc.db.Get(prevBlockHash[:], nil)
-	prevBlock = BlockDecoder(prevBlockEncoded)
+	prevBlock = block.BlockDecoder(prevBlockEncoded)
 	bc.iterator.visited = prevBlock
 
 	return prevBlock

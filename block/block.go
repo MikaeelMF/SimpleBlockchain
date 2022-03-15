@@ -1,4 +1,4 @@
-package main
+package block
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+
+	pow "../proofofwork"
 )
 
 // Block structure contains necessary fields fro a block
@@ -94,7 +96,7 @@ findNonce:
 func (b *Block) ValidateNonce() bool {
 
 	// Get the target
-	target := GetTarget()
+	target := pow.GetTarget()
 
 	// convert current block hash into big Int to compare
 	var currentBlockHash big.Int
@@ -144,7 +146,7 @@ func (b *Block) findNonce(replace string) (bool, error) {
 	}
 
 	// Get the target
-	target := GetTarget()
+	target := pow.GetTarget()
 	// initialize temporary nonce
 	var tempNonce uint64 = 1
 
