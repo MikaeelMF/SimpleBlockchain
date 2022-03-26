@@ -42,6 +42,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	default:
+		fmt.Println("Your request cannot get processed. Please write your command according to our guidline:")
+		help()
 	}
 
 	if createTransactionCmd.Parsed() {
