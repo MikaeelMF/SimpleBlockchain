@@ -1,7 +1,8 @@
 package blockchain
 
 import (
-	"../block"
+	"github.com/MikaeelMF/SimpleBlockchain/block"
+
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

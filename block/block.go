@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	pow "../proofofwork"
+	pow "github.com/MikaeelMF/SimpleBlockchain/proofofwork"
 )
 
 // Block structure contains necessary fields fro a block
